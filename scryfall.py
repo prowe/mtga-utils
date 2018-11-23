@@ -50,9 +50,8 @@ def scryfall_to_mtga(scryfall_card):
     )
     return mtga_card
 
-
 if __name__ == "__main__":
     x = get_arena_card_json(68369)
-    print scryfall_to_mtga(x)
+    print (scryfall_to_mtga(x)) 
     y = get_arena_card_json(67542)
-    print scryfall_to_mtga(y)
+    print (scryfall_to_mtga(y))

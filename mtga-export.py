@@ -12,11 +12,12 @@ import shlex
 import sys
 import os
 import scryfall
+import datetime
 
 
 __version__ = "0.2.2"
 MTGA_COLLECTION_KEYWORD = "PlayerInventory.GetPlayerCardsV3"
-MTGA_WINDOWS_LOG_FILE = os.getenv('APPDATA')+"\..\LocalLow\Wizards Of The Coast\MTGA\output_log.txt"
+#MTGA_WINDOWS_LOG_FILE = os.getenv('APPDATA')+"\..\LocalLow\Wizards Of The Coast\MTGA\output_log.txt"
 
 class MtgaLogParsingError(ValueError):
     pass
@@ -105,6 +106,7 @@ def get_argparse_parser():
     )
     parser.add_argument("-gf", "--goldfish", help="Export in mtggoldfish format", action="store_true")
     parser.add_argument("-ds", "--deckstats", help="Export in deckstats format", action="store_true")
+    parser.add_argument("-dk", "--decked", help="Export in decked format", action="store_true")
     parser.add_argument("-f", "--file", help="Store export to file", nargs=1)
     parser.add_argument("--debug", help="Show debug messages", action="store_true")
     return parser
@@ -165,10 +167,7 @@ def main(args_string=None):
 
     args = parse_arguments(args_string)
 
-    log_file = MTGA_WINDOWS_LOG_FILE
-    if args.log_file:
-        log_file = args.log_file[0]
-
+    log_file = args.log_file[0]
     if not os.path.isfile(log_file):
         print("Log file does not exist, provide proper logfile [%s]" % log_file)
         sys.exit(1)
@@ -209,6 +208,16 @@ def main(args_string=None):
                 card_set = 'MTGA'
             output.append('"%s",%s,"%s",%s,%s' % (
                 card.pretty_name, count, card_set, 0, 0,
+            ))
+
+    if args.decked:
+        output.append('//Exported on %s' % (datetime.datetime.now()))
+        for card, count in get_collection(args, mlog):
+            card_set = card.set
+            if card_set == 'ANA':
+                card_set = 'MTGA'
+            output.append('%s %s [%s]' % (
+                count, card.pretty_name, card_set
             ))
 
     if output != []:
