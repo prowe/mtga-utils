@@ -6,6 +6,7 @@
 from __future__ import print_function
 from future.utils import iteritems
 import json
+import yaml
 from mtga.set_data import all_mtga_cards
 import argparse
 import shlex
@@ -160,7 +161,18 @@ def get_collection(args, mlog):
             print("Got:")
             print(mlog.get_last_keyword_block('<== ' + MTGA_COLLECTION_KEYWORD))
 
+def build_set_name_to_multiverse_dict():
+    card_to_id = {}
+    with open('scryfall-default-cards.json', 'r') as scryfall_file:
+        scryfall_data = json.load(scryfall_file)
+        for scryfall_card in scryfall_data:
+            if len(scryfall_card['multiverse_ids']) > 0:
+                set_id = scryfall_card['set'].upper()
+                collector_number = scryfall_card['collector_number']
+                key = "%s:%s" % (set_id, collector_number)
+                card_to_id[key] = scryfall_card['multiverse_ids'][0]
 
+    return card_to_id
 
 def main(args_string=None):
     output = []
@@ -211,14 +223,30 @@ def main(args_string=None):
             ))
 
     if args.decked:
-        output.append('//Exported on %s' % (datetime.datetime.now()))
+        card_to_id = build_set_name_to_multiverse_dict()
+        coll2_hash = []
         for card, count in get_collection(args, mlog):
             card_set = card.set
             if card_set == 'ANA':
                 card_set = 'MTGA'
-            output.append('%s %s [%s]' % (
-                count, card.pretty_name, card_set
-            ))
+
+            key = "%s:%s" % (card_set, card.set_number)
+            if key not in card_to_id:
+                print ("cannot find %s" % (key))
+                continue
+
+            coll2_hash.append({'id': card_to_id[key]})
+            coll2_hash.append({'r': count})
+            
+        coll2 = {
+            'doc': [
+                {'version': 1},
+                {'items': coll2_hash}
+            ]}
+        print ("exporting %s cards" % (len(coll2_hash)))
+        yaml_coll2 = yaml.dump(coll2)
+        output.append(yaml_coll2)
+
 
     if output != []:
         output_str = '\n'.join(output)
